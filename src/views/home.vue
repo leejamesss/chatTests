@@ -25,26 +25,54 @@
         height: 80vh;
       "
     >
+
+
+
+
+
+          <a-collapse>
+          <a-collapse-panel key="1" header="密钥设置">
+            <div class="flex">
+              <input
+                class="input"
+                :type="'password'"
+                :placeholder="'请输入 API Key：sk-xxxxxxxxxx'"
+                v-model="apiKey"
+                @keydown.enter="save()"
+              />
+              <a-button type="primary" size="large" @click="save()">
+                保存
+              </a-button>
+            </div>
+            <a-radio-group v-model:value="type" @change="changeType">
+            </a-radio-group>
+          </a-collapse-panel>
+        </a-collapse>
+
+
+
       <a-collapse>
-        <a-collapse-panel key="1" header="设置">
+        <a-collapse-panel key="2" header="选择课程">
           <div class="flex">
             <input
               class="input"
-              :type="'password'"
-              :placeholder="'请输入 API Key：sk-xxxxxxxxxx'"
-              v-model="apiKey"
-              @keydown.enter="save()"
+              :type="'text'"
+              :placeholder="'请输入你需要的课程名称'"
+              v-model="courseName"
+              @keydown.enter="save2()"
             />
-            <a-button type="primary" size="large" @click="save()">
+            <a-button type="primary" size="large" @click="save2()">
               保存
             </a-button>
           </div>
           <a-radio-group v-model:value="type" @change="changeType">
-            <a-radio-button value="zaiwen">在问</a-radio-button>
-            <a-radio-button value="OpenAI">OpenAI</a-radio-button>
           </a-radio-group>
         </a-collapse-panel>
       </a-collapse>
+
+
+
+
       <a-row>
         <a-col :xs="{ span: 24 }" :lg="{ span: 10 }">
           <div style="overflow-y: scroll; height: 75vh">
@@ -90,7 +118,7 @@
             <div style="margin-top: 20px">
               <a-card
                 v-if="seeParse"
-                :title="isAnswerCorrect ? '回答正确！' : '再接再历'"
+                :title="isAnswerCorrect ? '回答正确！' : '再接再厉'"
                 style="width: 80%"
               >
                 <template #extra>
@@ -190,6 +218,7 @@ let isTalking = ref(false);
 let messageContent = ref("");
 let type = ref("OpenAI");
 let apiKey = ref("");
+let courseName = ref("")
 const decoder = new TextDecoder("utf-8");
 const roleAlias = { user: "ME", assistant: "ChatTests", system: "System" };
 const messageList = ref<ChatMessage[]>([
@@ -211,6 +240,28 @@ const messageList = ref<ChatMessage[]>([
 请告诉我你需要哪方面的帮助，我会根据你的需求给你提供相应的信息和建议。`,
   },
 ]);
+
+const knowledgeList = ref<ChatMessage[]>([
+  {
+    role: "system",
+    content:
+      "你是 一个能快速出题帮助用户通过不断刷题通过考试的大语言模型助手，需要对用户的疑问进行解答，并需要根据用户的需要创作相应的题目并给出解析。",
+  },
+  {
+    role: "assistant",
+    content: `你好，我是AI备考助手，我可以为你的备考保驾护航，你会在这个网站获得我的各种服务，例如：
+
+1. 出题：我会根据你想备考的科目，进行出题并给出解析；
+
+2. 辅导：对知识点有任何不理解的地方都可以与我沟通获得帮助；
+
+3. 闲聊：如果你感到寂寞或无聊，我们可以聊一些有趣的话题，以减轻你的压力。
+
+请告诉我你需要哪方面的帮助，我会根据你的需求给你提供相应的信息和建议。`,
+  },
+]);
+
+
 
 const value = ref(1);
 const seeParse = ref(false);
@@ -237,6 +288,72 @@ const changeType = (value: any) => {
   localStorage.setItem("type", type.value);
 };
 
+const save2 = () => {
+  if (saveCourseName(courseName.value.trim())) {
+  }
+};
+
+const saveCourseName = (courseName: string) => {
+  localStorage.setItem("courseName", courseName.toString());
+  return true;
+};
+
+const getCourseName = () => {
+  const courseNameFromStorage = localStorage.getItem("courseName") ?? "";
+  courseName.value = courseNameFromStorage;
+  return courseNameFromStorage;
+};
+
+
+
+
+var prompt= ""
+
+
+//调用chat
+const generateLearningScope = () => {
+  sendKnowledge();
+  prompt = `请你写出关于${learningScope}的相关知识点，以关键字的形式呈现，格式示例：面向对象技术、软件工程、项目管理、数据结构和算法基础`;
+  var tmp = knowledgeList.value[1].content;
+  return tmp;
+  // learningArea = tmp;
+}
+
+
+
+
+const sendKnowledgeMessage = async (content: string = prompt) => {
+  try {
+    if (knowledgeList.value.length === 2) {
+      knowledgeList.value.pop();
+    }
+    knowledgeList.value.push({ role: "user", content });
+    clearMessageContent();
+    knowledgeList.value.push({ role: "assistant", content: "" });
+
+    const { body, status } = await chat(knowledgeList.value, getAPIKey());
+    if (body) {
+      const reader = body.getReader();
+      await readContentStream(reader, status);
+    }
+    // return tmps;
+  } catch (error: any) {
+    appendLastKnoledgeContent(error);
+  } finally {
+    // return tmps;
+    scrollToBottom();
+  }
+};
+
+
+const sendKnowledge = () => {
+  if (!prompt.length) return;
+  sendKnowledgeMessage();
+};
+
+
+
+
 const globleQuestion = ref({
   question: "以下关于好的软件设计原则的叙述中，不正确的是（）。",
   A: "模块化",
@@ -251,15 +368,19 @@ const globleQuestion = ref({
 var accumulateQuestion = "";
 // 返回出题信息
 var questionInfo = "";
-var learningScope = "软件设计师";
+//字符串
+var learningScope = (getCourseName());
+
 var learningArea =
-  "面向对象技术、软件工程、项目管理、数据结构和算法基础、计算机体系结构、信息安全&网络、程序设计语言&编译器、操作系统、数据库系统知识产权与标准化、相关领域英语材料完型填空";
+  (generateLearningScope());
+  // "面向对象技术、软件工程、项目管理、数据结构和算法基础、计算机体系结构、信息安全&网络、程序设计语言&编译器、操作系统、数据库系统知识产权与标准化、相关领域英语材料完型填空";
 
 const qNum = ref(1);
 
 const qNumInner = ref(1);
 const updateQuestion = () => {
   qNumInner.value++;
+  learningScope = (getCourseName());
   nextQuestion();
   // globleQuestion.value = JSON.parse(jsonContent);
   // console.log(globleQuestion);
@@ -313,6 +434,7 @@ onMounted(() => {
 
 const nextQuestion_old = async () => {
   console.log("next question");
+  learningScope = (getCourseName());
   seeParse.value = false;
   questionInfo = "";
   accumulateQuestion += globleQuestion.value.question;
@@ -553,6 +675,61 @@ const readStream = async (
   console.log("partialLine:" + partialLine);
 };
 
+
+
+const readContentStream = async (
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  status: number,
+) => {
+  let partialLine = "";
+
+  while (true) {
+    // eslint-disable-next-line no-await-in-loop
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    const decodedText = decoder.decode(value, { stream: true });
+    // console.log(decodedText)
+
+    if (status !== 200) {
+      const json = JSON.parse(decodedText); // start with "data: "
+      const content = json.error.message ?? decodedText;
+      appendLastKnoledgeContent(content);
+      return;
+    }
+
+    if (type.value === "zaiwen") {
+      // for (const line of newLines) {
+      //   // if (line.length === 0) continue; // ignore empty message
+      //   appendLastMessageContent(line);
+      //   scrollToBottom();
+      // }
+      appendLastKnoledgeContent(decodedText);
+      scrollToBottom();
+    } else {
+      const chunk = partialLine + decodedText;
+      const newLines = chunk.split(/\r?\n/);
+      partialLine = newLines.pop() ?? "";
+      for (const line of newLines) {
+        if (line.length === 0) continue; // ignore empty message
+        if (line.startsWith(":")) continue; // ignore sse comment message
+        if (line === "data: [DONE]") return; //
+
+        const json = JSON.parse(line.substring(6)); // start with "data: "
+        const content =
+          status === 200
+            ? json.choices[0].delta.content ?? ""
+            : json.error.message;
+        appendLastKnoledgeContent(content);
+        // scrollToBottom();
+      }
+    }
+  }
+  // return partialLine;
+  // console.log("partialLine:" + partialLine);
+};
+
+
 const readStream2Question = async (
   reader: ReadableStreamDefaultReader<Uint8Array>,
   status: number,
@@ -620,6 +797,11 @@ const tryRenderPartialQuestion = (questionInfo: string) => {
   }
 };
 
+
+const appendLastKnoledgeContent = (content: string) =>
+  (knowledgeList.value[knowledgeList.value.length - 1].content += content);
+
+
 const appendLastMessageContent = (content: string) =>
   (messageList.value[messageList.value.length - 1].content += content);
 
@@ -635,10 +817,13 @@ const send = () => {
 
 const getSecretKey = () => "lianginx";
 
+
+
+
 const saveAPIKey = (apiKey: string) => {
   if (apiKey.slice(0, 3) !== "sk-" || apiKey.length !== 51) {
     alert(
-      "API Key 错误，请检查后重新输入！\n如无key可尝试 在问(zaiwen.top) 渠道",
+      "API Key 错误，请检查后重新输入!",
     );
     return false;
   }
@@ -654,7 +839,7 @@ const getAPIKey = () => {
     getSecretKey(),
   ).toString(cryptoJS.enc.Utf8);
   apiKey.value = apiKeyFromStorage;
-  const typeFromStorage = localStorage.getItem("type") ?? "zaiwen";
+  const typeFromStorage = localStorage.getItem("type") ?? "test";
   type.value = typeFromStorage;
   return apiKeyFromStorage;
 };

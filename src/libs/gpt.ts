@@ -2,7 +2,7 @@ import type { ChatMessage } from "@/types";
 
 export async function chat(messageList: ChatMessage[], apiKey: string) {
   try {
-    const typeFromStorage = localStorage.getItem("type") ?? "zaiwen";
+    const typeFromStorage = localStorage.getItem("type") ?? "test";
     if (typeFromStorage === "zaiwen") {
       const result = await fetch("https://www.gaosijiaoyu.cn/message", {
         method: "post",
