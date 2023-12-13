@@ -52,7 +52,7 @@
 
 
       <a-collapse>
-        <a-collapse-panel key="2" header="选择课程">
+        <a-collapse-panel key="2" header="课程设置">
           <div class="flex">
             <input
               class="input"
@@ -69,6 +69,27 @@
           </a-radio-group>
         </a-collapse-panel>
       </a-collapse>
+
+
+
+      <a-collapse>
+          <a-collapse-panel key="3" header="考点设置">
+            <div class="flex">
+              <input
+                class="input"
+                :type="'text'"
+                :placeholder="'请输入你需要的考点名称'"
+                v-model="learningAreaName"
+                @keydown.enter="save3()"
+              />
+              <a-button type="primary" size="large" @click="save3()">
+                保存
+              </a-button>
+            </div>
+            <a-radio-group v-model:value="type" @change="changeType">
+            </a-radio-group>
+          </a-collapse-panel>
+        </a-collapse>
 
 
 
@@ -195,6 +216,7 @@
 </template>
 
 <script setup lang="ts">
+import axios from 'axios'
 import type { ChatMessage } from "@/types";
 import {
   ref,
@@ -219,6 +241,7 @@ let messageContent = ref("");
 let type = ref("OpenAI");
 let apiKey = ref("");
 let courseName = ref("")
+let learningAreaName = ref("")
 const decoder = new TextDecoder("utf-8");
 const roleAlias = { user: "ME", assistant: "ChatTests", system: "System" };
 const messageList = ref<ChatMessage[]>([
@@ -241,25 +264,25 @@ const messageList = ref<ChatMessage[]>([
   },
 ]);
 
-const knowledgeList = ref<ChatMessage[]>([
-  {
-    role: "system",
-    content:
-      "你是 一个能快速出题帮助用户通过不断刷题通过考试的大语言模型助手，需要对用户的疑问进行解答，并需要根据用户的需要创作相应的题目并给出解析。",
-  },
-  {
-    role: "assistant",
-    content: `你好，我是AI备考助手，我可以为你的备考保驾护航，你会在这个网站获得我的各种服务，例如：
+// const knowledgeList = ref<ChatMessage[]>([
+//   {
+//     role: "system",
+//     content:
+//       "你是 一个能快速出题帮助用户通过不断刷题通过考试的大语言模型助手，需要对用户的疑问进行解答，并需要根据用户的需要创作相应的题目并给出解析。",
+//   },
+//   {
+//     role: "assistant",
+//     content: `你好，我是AI备考助手，我可以为你的备考保驾护航，你会在这个网站获得我的各种服务，例如：
 
-1. 出题：我会根据你想备考的科目，进行出题并给出解析；
+// 1. 出题：我会根据你想备考的科目，进行出题并给出解析；
 
-2. 辅导：对知识点有任何不理解的地方都可以与我沟通获得帮助；
+// 2. 辅导：对知识点有任何不理解的地方都可以与我沟通获得帮助；
 
-3. 闲聊：如果你感到寂寞或无聊，我们可以聊一些有趣的话题，以减轻你的压力。
+// 3. 闲聊：如果你感到寂寞或无聊，我们可以聊一些有趣的话题，以减轻你的压力。
 
-请告诉我你需要哪方面的帮助，我会根据你的需求给你提供相应的信息和建议。`,
-  },
-]);
+// 请告诉我你需要哪方面的帮助，我会根据你的需求给你提供相应的信息和建议。`,
+//   },
+// ]);
 
 
 
@@ -294,6 +317,10 @@ const save2 = () => {
 };
 
 const saveCourseName = (courseName: string) => {
+  if (courseName.length === 0) {
+    alert("请输入课程名称");
+    return false;
+  }
   localStorage.setItem("courseName", courseName.toString());
   return true;
 };
@@ -304,55 +331,77 @@ const getCourseName = () => {
   return courseNameFromStorage;
 };
 
-
-
-
-var prompt= ""
-
-
-//调用chat
-const generateLearningScope = () => {
-  sendKnowledge();
-  prompt = `请你写出关于${learningScope}的相关知识点，以关键字的形式呈现，格式示例：面向对象技术、软件工程、项目管理、数据结构和算法基础`;
-  var tmp = knowledgeList.value[1].content;
-  return tmp;
-  // learningArea = tmp;
-}
-
-
-
-
-const sendKnowledgeMessage = async (content: string = prompt) => {
-  try {
-    if (knowledgeList.value.length === 2) {
-      knowledgeList.value.pop();
-    }
-    knowledgeList.value.push({ role: "user", content });
-    knowledgeList.value.push({ role: "assistant", content: "" });
-
-    const { body, status } = await chat(knowledgeList.value, getAPIKey());
-    if (body) {
-      const reader = body.getReader();
-      await readContentStream(reader, status);
-    }
-  } catch (error: any) {
-    appendLastKnoledgeContent(error);
-  } finally {
-    scrollToBottom();
+const save3 = () => {
+  if (saveLearningAreaName(learningAreaName.value.trim())) {
   }
 };
 
-
-const sendKnowledge = () => {
-  if (!prompt.length) return;
-  sendKnowledgeMessage();
+const saveLearningAreaName = (learningAreaName: string) => {
+  if (learningAreaName.length === 0) {
+    alert("请输入考点名称");
+    return false;
+  }
+  localStorage.setItem("learningAreaName", learningAreaName.toString());
+  return true;
 };
+
+const getLearningAreaName = () => {
+  const learningAreaNameFromStorage = localStorage.getItem("learningAreaName") ?? "";
+  learningAreaName.value = learningAreaNameFromStorage;
+  return learningAreaNameFromStorage;
+};
+
+
+
+
+// var prompt= ""
+
+
+// //调用chat
+// const generateLearningScope = () => {
+
+//   prompt = `请你写出关于${learningScope}的相关知识点，以关键字的形式呈现，格式示例：面向对象技术、软件工程、项目管理、数据结构和算法基础`;
+//   sendKnowledge();
+//   var assistantMessages = knowledgeList.value.filter(item => item.role === "assistant");
+//   var assistantMessage = assistantMessages[assistantMessages.length - 1];
+//   var tmp = assistantMessage ? assistantMessage.content : "";
+//   console.log(tmp)
+//   return tmp;
+// }
+
+
+
+
+// const sendKnowledgeMessage = async (content: string = prompt) => {
+//   try {
+//     if (knowledgeList.value.length === 2) {
+//       knowledgeList.value.pop();
+//     }
+//     knowledgeList.value.push({ role: "user", content });
+//     knowledgeList.value.push({ role: "assistant", content: "" });
+//     const { body, status } = await chat(knowledgeList.value, getAPIKey());
+//     if (body) {
+//       const reader = body.getReader();
+//       await readContentStream(reader, status);
+//     }
+//   } catch (error: any) {
+//     appendLastKnoledgeContent(error);
+//   } finally {
+//     scrollToBottom();
+//   }
+// };
+
+
+// const sendKnowledge = () => {
+//   if (!prompt.length) return;
+//   sendKnowledgeMessage();
+// };
 
 
 
 
 const globleQuestion = ref({
-  question: "以下关于好的软件设计原则的叙述中，不正确的是（）。",
+  question: "[Demo] 以下关于好的软件设计原则的叙述中，不正确的是（）。",
   A: "模块化",
   B: "集中化",
   C: "提高模块独立性",
@@ -369,18 +418,19 @@ var questionInfo = "";
 var learningScope = (getCourseName());
 
 var learningArea =
-  (generateLearningScope());
+  (getLearningAreaName());
   // "面向对象技术、软件工程、项目管理、数据结构和算法基础、计算机体系结构、信息安全&网络、程序设计语言&编译器、操作系统、数据库系统知识产权与标准化、相关领域英语材料完型填空";
 
 const qNum = ref(1);
 
 const qNumInner = ref(1);
+
+
 const updateQuestion = () => {
   qNumInner.value++;
-  learningScope = (getCourseName());
+  learningScope = getCourseName();
+  learningArea = getLearningAreaName();
   nextQuestion();
-  // globleQuestion.value = JSON.parse(jsonContent);
-  // console.log(globleQuestion);
 };
 
 const jsonContent = `{
@@ -407,6 +457,27 @@ const seeTheParse = () => {
   }
 
   seeParse.value = true;
+
+  const params = {
+    a: globleQuestion.value.A,
+    b: globleQuestion.value.B,
+    c: globleQuestion.value.C,
+    d: globleQuestion.value.D,
+    question: globleQuestion.value.question,
+    answer: globleQuestion.value.rightIndex,
+    course: learningScope,
+    testpoint: learningArea,
+    analysis: globleQuestion.value.analyze,
+    correct: isAnswerCorrect.value,
+  };
+  axios.post('http://localhost:3000/api/user/addProblem', params)
+    .then((response) => {
+      console.log(response);
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+
 };
 
 const closeParse = () => {
@@ -542,8 +613,18 @@ const nextQuestion = async () => {
     console.log("appendQuestionInfo res:" + questionInfo);
     // 进行转换
     globleQuestion.value = JSON.parse(questionInfo);
+
+
+      
   }
 };
+
+
+
+
+
+
+
 
 const nextQuestion_shortAnswer = async () => {
   console.log("next question");
@@ -674,57 +755,57 @@ const readStream = async (
 
 
 
-const readContentStream = async (
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  status: number,
-) => {
-  let partialLine = "";
+// const readContentStream = async (
+//   reader: ReadableStreamDefaultReader<Uint8Array>,
+//   status: number,
+// ) => {
+//   let partialLine = "";
 
-  while (true) {
-    // eslint-disable-next-line no-await-in-loop
-    const { value, done } = await reader.read();
-    if (done) break;
+//   while (true) {
+//     // eslint-disable-next-line no-await-in-loop
+//     const { value, done } = await reader.read();
+//     if (done) break;
 
-    const decodedText = decoder.decode(value, { stream: true });
-    // console.log(decodedText)
+//     const decodedText = decoder.decode(value, { stream: true });
+//     // console.log(decodedText)
 
-    if (status !== 200) {
-      const json = JSON.parse(decodedText); // start with "data: "
-      const content = json.error.message ?? decodedText;
-      appendLastKnoledgeContent(content);
-      return;
-    }
+//     if (status !== 200) {
+//       const json = JSON.parse(decodedText); // start with "data: "
+//       const content = json.error.message ?? decodedText;
+//       appendLastKnoledgeContent(content);
+//       return;
+//     }
 
-    if (type.value === "zaiwen") {
-      // for (const line of newLines) {
-      //   // if (line.length === 0) continue; // ignore empty message
-      //   appendLastMessageContent(line);
-      //   scrollToBottom();
-      // }
-      appendLastKnoledgeContent(decodedText);
-      scrollToBottom();
-    } else {
-      const chunk = partialLine + decodedText;
-      const newLines = chunk.split(/\r?\n/);
-      partialLine = newLines.pop() ?? "";
-      for (const line of newLines) {
-        if (line.length === 0) continue; // ignore empty message
-        if (line.startsWith(":")) continue; // ignore sse comment message
-        if (line === "data: [DONE]") return; //
+//     if (type.value === "zaiwen") {
+//       // for (const line of newLines) {
+//       //   // if (line.length === 0) continue; // ignore empty message
+//       //   appendLastMessageContent(line);
+//       //   scrollToBottom();
+//       // }
+//       appendLastKnoledgeContent(decodedText);
+//       scrollToBottom();
+//     } else {
+//       const chunk = partialLine + decodedText;
+//       const newLines = chunk.split(/\r?\n/);
+//       partialLine = newLines.pop() ?? "";
+//       for (const line of newLines) {
+//         if (line.length === 0) continue; // ignore empty message
+//         if (line.startsWith(":")) continue; // ignore sse comment message
+//         if (line === "data: [DONE]") return; //
 
-        const json = JSON.parse(line.substring(6)); // start with "data: "
-        const content =
-          status === 200
-            ? json.choices[0].delta.content ?? ""
-            : json.error.message;
-        appendLastKnoledgeContent(content);
-        // scrollToBottom();
-      }
-    }
-  }
-  // return partialLine;
-  // console.log("partialLine:" + partialLine);
-};
+//         const json = JSON.parse(line.substring(6)); // start with "data: "
+//         const content =
+//           status === 200
+//             ? json.choices[0].delta.content ?? ""
+//             : json.error.message;
+//         appendLastKnoledgeContent(content);
+//         // scrollToBottom();
+//       }
+//     }
+//   }
+//   // return partialLine;
+//   // console.log("partialLine:" + partialLine);
+// };
 
 
 const readStream2Question = async (
@@ -795,8 +876,8 @@ const tryRenderPartialQuestion = (questionInfo: string) => {
 };
 
 
-const appendLastKnoledgeContent = (content: string) =>
-  (knowledgeList.value[knowledgeList.value.length - 1].content += content);
+// const appendLastKnoledgeContent = (content: string) =>
+//   (knowledgeList.value[knowledgeList.value.length - 1].content += content);
 
 
 const appendLastMessageContent = (content: string) =>
