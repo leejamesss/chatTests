@@ -328,7 +328,6 @@ const sendKnowledgeMessage = async (content: string = prompt) => {
       knowledgeList.value.pop();
     }
     knowledgeList.value.push({ role: "user", content });
-    clearMessageContent();
     knowledgeList.value.push({ role: "assistant", content: "" });
 
     const { body, status } = await chat(knowledgeList.value, getAPIKey());
@@ -336,11 +335,9 @@ const sendKnowledgeMessage = async (content: string = prompt) => {
       const reader = body.getReader();
       await readContentStream(reader, status);
     }
-    // return tmps;
   } catch (error: any) {
     appendLastKnoledgeContent(error);
   } finally {
-    // return tmps;
     scrollToBottom();
   }
 };
