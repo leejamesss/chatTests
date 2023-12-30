@@ -13,9 +13,9 @@
     ></iframe>
   </a-modal>
   <a-layout>
-    <a-layout-header style="color: #fff">
+    <!-- <a-layout-header style="color: #fff">
       北京大学智能图书馆-AI备考助手
-    </a-layout-header>
+    </a-layout-header> -->
     <a-layout-content
       style="
         background: #fff;
@@ -723,7 +723,7 @@ const readStream = async (
       return;
     }
 
-    if (type.value === "zaiwen") {
+    if (type.value === "") {
       // for (const line of newLines) {
       //   // if (line.length === 0) continue; // ignore empty message
       //   appendLastMessageContent(line);
@@ -832,7 +832,7 @@ const readStream2Question = async (
       return;
     }
 
-    if (type.value === "zaiwen") {
+    if (type.value === "") {
       // for (const line of newLines) {
       //   questionInfo += line;
       // }
